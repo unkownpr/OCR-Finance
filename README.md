@@ -265,7 +265,6 @@ Bu uyarı **normaldir** ve zararsızdır:
 
 ### Admin Paneline Erişemiyorum
 - ✅ İlk kullanıcı olarak kayıt oldunuz mu?
-- ✅ Veya \`programc4@gmail.com\` ile kayıt oldunuz mu?
 - ✅ Database'de \`is_admin\` değerinin \`true\` olduğunu kontrol edin
 
 ## 🤝 Katkıda Bulunma
