@@ -279,10 +279,6 @@ Bu uyarı **normaldir** ve zararsızdır:
 
 Bu proje MIT lisansı altında lisanslanmıştır.
 
-## 💬 İletişim
-
-Sorularınız için: programc4@gmail.com
-
 ---
 
 **Made with ❤️ using Next.js and Supabase**
