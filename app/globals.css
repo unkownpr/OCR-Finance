@@ -1,26 +1,88 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Ana renkler - Koyu tema (Finance uyumlu yeşil-altın tonları) */
+  --background: 160 25% 8%;
+  --foreground: 150 25% 98%;
+  --card: 160 20% 12%;
+  --card-foreground: 150 25% 98%;
+  --popover: 160 20% 12%;
+  --popover-foreground: 150 25% 98%;
+  
+  /* Primary - Emerald yeşil (para, büyüme) */
+  --primary: 160 84% 39%;
+  --primary-foreground: 160 25% 8%;
+  
+  /* Secondary - Koyu yeşil gri */
+  --secondary: 160 20% 20%;
+  --secondary-foreground: 150 25% 98%;
+  
+  /* Muted - Soft yeşil gri */
+  --muted: 160 15% 22%;
+  --muted-foreground: 160 10% 65%;
+  
+  /* Accent - Altın/Amber (değer, zenginlik) */
+  --accent: 43 96% 56%;
+  --accent-foreground: 160 25% 8%;
+  
+  /* Destructive - Kırmızı */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 150 25% 98%;
+  
+  /* Border & Input */
+  --border: 160 20% 18%;
+  --input: 160 20% 18%;
+  --ring: 160 84% 39%;
+  
+  --radius: 0.5rem;
+  
+  /* Chart renkleri - Finance temalı */
+  --chart-1: 160 84% 39%; /* Emerald yeşil */
+  --chart-2: 43 96% 56%;  /* Altın */
+  --chart-3: 173 58% 39%; /* Teal */
+  --chart-4: 280 89% 64%; /* Mor */
+  --chart-5: 0 72% 51%;   /* Kırmızı */
+  
+  /* Site ayarlarından yüklenebilir özel renkler */
+  --success: 142 76% 36%;
+  --warning: 38 92% 50%;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-md: var(--radius);
+  --radius-sm: calc(var(--radius) - 2px);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: hsl(var(--border));
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }

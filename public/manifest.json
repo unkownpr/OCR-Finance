@@ -1,0 +1,47 @@
+{
+  "name": "OCR Finance - Fatura Takip Sistemi",
+  "short_name": "OCR Finance",
+  "description": "OCR teknolojisi ile fatura okuma ve finansal takip uygulaması",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#22c55e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity", "utilities"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Yeni Fatura Ekle",
+      "short_name": "Yeni Fatura",
+      "description": "Hızlı fatura ekleme",
+      "url": "/dashboard/invoices/new",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "İstatistikler",
+      "short_name": "İstatistikler",
+      "description": "Finansal istatistikleri görüntüle",
+      "url": "/dashboard/stats",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
+
