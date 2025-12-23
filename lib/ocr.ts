@@ -1,4 +1,5 @@
 import { createWorker, PSM, OEM } from 'tesseract.js';
+import { extractInvoiceDataWithGemini } from './gemini';
 
 export interface OCRResult {
   text: string;
@@ -8,6 +9,7 @@ export interface OCRResult {
   date?: string | null;
   vendor?: string | null;
   detectedAmounts?: Array<{ value: number; matchText: string }>; // Birden fazla tutar tespit edildiyse
+  geminiEnhanced?: boolean; // Gemini AI tarafından zenginleştirildi mi?
 }
 
 export interface OCRProgress {
@@ -184,7 +186,9 @@ export const terminateOCRWorker = async () => {
  */
 export const processInvoice = async (
   imageFile: File,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  geminiApiKey?: string,
+  geminiModel?: string
 ): Promise<OCRResult> => {
   try {
     // Görseli ön işle
@@ -196,13 +200,46 @@ export const processInvoice = async (
     const worker = await getWorker(onProgress);
 
     // OCR işlemini gerçekleştir
-    onProgress?.({ status: 'Metin tanınıyor...', progress: 0.3 });
+    onProgress?.({ status: 'Metin tanınıyor (Tesseract.js)...', progress: 0.3 });
     const {
       data: { text, confidence, words },
     } = await worker.recognize(processedImage);
 
-    // Metni analiz et
-    onProgress?.({ status: 'Fatura analiz ediliyor...', progress: 0.9 });
+    console.log('📝 Tesseract OCR tamamlandı, metin uzunluğu:', text.length);
+
+    // Gemini API varsa, AI ile zenginleştir
+    if (geminiApiKey && text) {
+      try {
+        onProgress?.({ status: 'AI ile analiz ediliyor (Gemini)...', progress: 0.7 });
+        const geminiData = await extractInvoiceDataWithGemini(
+          text,
+          geminiApiKey,
+          geminiModel || 'gemini-2.0-flash-exp'
+        );
+
+        console.log('🤖 Gemini AI sonuçları:', geminiData);
+
+        // Gemini'nin sonuçlarını kullan (daha doğru)
+        onProgress?.({ status: 'Tamamlandı! (AI ile zenginleştirildi)', progress: 1 });
+
+        return {
+          text,
+          amount: geminiData.amount,
+          confidence: Math.max(confidence, geminiData.confidence * 100), // Gemini güveni %0-1, Tesseract %0-100
+          invoiceNumber: geminiData.invoiceNumber,
+          date: geminiData.date,
+          vendor: geminiData.vendor,
+          detectedAmounts: [], // Gemini tek tutar döndürüyor
+          geminiEnhanced: true,
+        };
+      } catch (geminiError) {
+        console.warn('⚠️ Gemini AI hatası, Tesseract sonuçları kullanılıyor:', geminiError);
+        // Gemini başarısız olursa, Tesseract sonuçlarına fallback
+      }
+    }
+
+    // Gemini yoksa veya hata verdiyse, Tesseract analiz sonuçlarını kullan
+    onProgress?.({ status: 'Fatura analiz ediliyor (Tesseract)...', progress: 0.9 });
     const { selectedAmount, allAmounts } = extractAmount(text);
     const invoiceNumber = extractInvoiceNumber(text);
     const date = extractDate(text);
@@ -217,7 +254,8 @@ export const processInvoice = async (
       invoiceNumber,
       date,
       vendor,
-      detectedAmounts: allAmounts, // Tüm tespit edilen tutarları da gönder
+      detectedAmounts: allAmounts,
+      geminiEnhanced: false,
     };
   } catch (error) {
     console.error('OCR Error:', error);

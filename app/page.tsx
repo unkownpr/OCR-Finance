@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +13,11 @@ import {
   ArrowRight,
   CheckCircle,
 } from 'lucide-react';
+import { useSettings } from '@/components/providers/settings-provider';
 
 export default function HomePage() {
+  const { settings, loading } = useSettings();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10">
       {/* Header */}
@@ -23,7 +28,7 @@ export default function HomePage() {
               <Wallet className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">OCR Finance</h1>
+              <h1 className="text-xl font-bold">{settings.siteName}</h1>
               <p className="text-xs text-muted-foreground">Fatura Takip</p>
             </div>
           </div>
@@ -42,15 +47,14 @@ export default function HomePage() {
       <section className="container mx-auto px-4 py-20 text-center">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="inline-block px-4 py-2 bg-primary/10 rounded-full">
-            <p className="text-sm font-medium text-primary">OCR Teknolojisi ile Akıllı Fatura Yönetimi</p>
+            <p className="text-sm font-medium text-primary">{settings.siteDescription}</p>
           </div>
           <h2 className="text-5xl md:text-6xl font-bold tracking-tight">
             Faturalarınızı Akıllıca
             <span className="text-primary block mt-2">Takip Edin</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            OCR teknolojisi ile faturalarınızı otomatik olarak okuyun, 
-            finansal durumunuzu gerçek zamanlı takip edin ve bütçenizi kolayca yönetin.
+            {settings.siteDescription}
           </p>
           <div className="flex items-center justify-center gap-4 pt-6">
             <Link href="/register">
@@ -190,7 +194,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-border/50 py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 OCR Finance. Tüm hakları saklıdır.</p>
+          <p>© {new Date().getFullYear()} develop by ssilistre.dev</p>
         </div>
       </footer>
     </div>

@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createSupabaseClient } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
@@ -70,6 +71,10 @@ export default function AdminSettingsPage() {
     enable_registration: true,
     require_email_verification: false,
   });
+
+  // AI/OCR Ayarları
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash-exp');
 
   // Kullanıcılar
   const [users, setUsers] = useState<UserWithRole[]>([]);
@@ -140,6 +145,10 @@ export default function AdminSettingsPage() {
           enable_registration: settingsMap.get('enable_registration') || true,
           require_email_verification: settingsMap.get('require_email_verification') || false,
         });
+
+        // AI/OCR Ayarları
+        setGeminiApiKey(settingsMap.get('gemini_api_key') || '');
+        setGeminiModel(settingsMap.get('gemini_model') || 'gemini-2.0-flash-exp');
       }
     } catch (error: any) {
       console.error('Ayarlar yüklenirken hata:', error.message || error);
@@ -275,6 +284,39 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleSaveAISettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const supabase = createSupabaseClient();
+      const updates = [
+        { key: 'gemini_api_key', value: geminiApiKey },
+        { key: 'gemini_model', value: geminiModel },
+      ];
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('site_settings')
+          .update({ setting_value: update.value })
+          .eq('setting_key', update.key);
+
+        if (error) throw error;
+      }
+
+      await refreshSettings(); // Ayarları yenile
+      toast.success('AI/OCR ayarları kaydedildi', {
+        description: `Model: ${geminiModel}`,
+      });
+      await fetchAllSettings(); // Formu güncelle
+    } catch (error) {
+      console.error('AI ayarları kaydedilirken hata:', error);
+      toast.error('AI ayarları kaydedilemedi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleToggleAdmin = async (userId: string, currentStatus: boolean) => {
     try {
       const supabase = createSupabaseClient();
@@ -375,7 +417,7 @@ export default function AdminSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
           <TabsTrigger value="general" className="gap-2">
             <Globe className="w-4 h-4" />
             Genel
@@ -383,6 +425,10 @@ export default function AdminSettingsPage() {
           <TabsTrigger value="theme" className="gap-2">
             <Palette className="w-4 h-4" />
             Tema
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-2">
+            <Settings className="w-4 h-4" />
+            AI/OCR
           </TabsTrigger>
           <TabsTrigger value="users" className="gap-2">
             <Users className="w-4 h-4" />
@@ -746,6 +792,151 @@ export default function AdminSettingsPage() {
                     <>
                       <Save className="w-4 h-4" />
                       Tema Ayarlarını Kaydet
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AI/OCR Ayarları */}
+        <TabsContent value="ai" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI ve OCR Ayarları</CardTitle>
+              <CardDescription>
+                Yapay zeka destekli OCR için Google Gemini API anahtarı
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSaveAISettings} className="space-y-6">
+                <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Settings className="w-5 h-5 text-primary mt-0.5" />
+                    <div className="flex-1 space-y-2">
+                      <h4 className="font-medium">Gemini AI ile Gelişmiş OCR</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Google Gemini API key ekleyerek OCR doğruluğunu artırın. 
+                        Tesseract.js ham metni çıkaracak, Gemini AI daha doğru field extraction yapacak.
+                      </p>
+                      <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                        <li>Tutar, tarih, satıcı bilgilerini daha doğru tespit</li>
+                        <li>Türkçe faturalar için optimize edilmiş</li>
+                        <li>Karmaşık layout'ları anlama</li>
+                        <li>Binlik ayraç ve virgül formatlarını otomatik düzeltme</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="gemini_api_key" className="flex items-center gap-2">
+                      Gemini API Key
+                      <Badge variant="secondary" className="text-xs">Opsiyonel</Badge>
+                    </Label>
+                    <Input
+                      id="gemini_api_key"
+                      type="password"
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      placeholder="AIza..."
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      💡 API key yoksa sadece Tesseract.js kullanılacak. 
+                      <a 
+                        href="https://aistudio.google.com/app/apikey" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline ml-1"
+                      >
+                        Ücretsiz key al →
+                      </a>
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="gemini_model">Gemini Model</Label>
+                    <Select value={geminiModel} onValueChange={setGeminiModel}>
+                      <SelectTrigger id="gemini_model">
+                        <SelectValue placeholder="Model seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gemini-2.0-flash-exp">
+                          <div className="flex flex-col">
+                            <span className="font-medium">Gemini 2.0 Flash (Experimental)</span>
+                            <span className="text-xs text-muted-foreground">En yeni, en hızlı ⚡</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="gemini-1.5-flash">
+                          <div className="flex flex-col">
+                            <span className="font-medium">Gemini 1.5 Flash</span>
+                            <span className="text-xs text-muted-foreground">Hızlı ve verimli</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="gemini-1.5-flash-8b">
+                          <div className="flex flex-col">
+                            <span className="font-medium">Gemini 1.5 Flash-8B</span>
+                            <span className="text-xs text-muted-foreground">Daha küçük, ekonomik</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="gemini-1.5-pro">
+                          <div className="flex flex-col">
+                            <span className="font-medium">Gemini 1.5 Pro</span>
+                            <span className="text-xs text-muted-foreground">En doğru, karmaşık görevler için</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      🎯 Önerilen: Gemini 2.0 Flash (hız + doğruluk dengesi)
+                    </p>
+                  </div>
+                </div>
+
+                {geminiApiKey && (
+                  <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-success mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-success">Gemini AI Aktif</h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          OCR artık yapay zeka ile güçlendirilmiş. Field extraction çok daha doğru olacak.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Test Örneği</Label>
+                  <div className="p-3 bg-muted rounded-lg text-sm font-mono space-y-1">
+                    <div className="text-muted-foreground">// Tesseract.js çıktısı (ham)</div>
+                    <div>TOPLAM: 11.85O,53 TL</div>
+                    <div className="text-muted-foreground mt-2">// Gemini AI düzeltmesi</div>
+                    <div className="text-success">Tutar: 11850.53 TL ✓</div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Gemini AI, OCR hatalarını otomatik düzeltir (örn: "O" → "0", noktalama düzeltmeleri)
+                  </p>
+                </div>
+
+                <Button type="submit" className="w-full gap-2" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Kaydediliyor...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      AI/OCR Ayarlarını Kaydet
                     </>
                   )}
                 </Button>

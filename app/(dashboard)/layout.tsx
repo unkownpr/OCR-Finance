@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
 import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
-import { SettingsProvider } from '@/components/providers/settings-provider';
 import { Loader2 } from 'lucide-react';
 
 const DashboardLayoutContent = ({ children }: { children: React.ReactNode }) => {
@@ -46,9 +45,7 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthProvider>
-      <SettingsProvider>
-        <DashboardLayoutContent>{children}</DashboardLayoutContent>
-      </SettingsProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
     </AuthProvider>
   );
 }

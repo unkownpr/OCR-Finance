@@ -29,6 +29,10 @@ interface AppSettings {
   // Güvenlik
   enableRegistration: boolean;
   requireEmailVerification: boolean;
+  
+  // AI / OCR
+  geminiApiKey: string;
+  geminiModel: string;
 }
 
 const defaultSettings: AppSettings = {
@@ -51,6 +55,8 @@ const defaultSettings: AppSettings = {
   fontFamily: 'var(--font-geist-sans), Inter, system-ui, sans-serif',
   enableRegistration: true,
   requireEmailVerification: false,
+  geminiApiKey: '',
+  geminiModel: 'gemini-2.0-flash-exp', // Default model
 };
 
 interface SettingsContextType {
@@ -121,6 +127,8 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
           fontFamily: settingsMap.get('font_family') || defaultSettings.fontFamily,
           enableRegistration: settingsMap.get('enable_registration') ?? defaultSettings.enableRegistration,
           requireEmailVerification: settingsMap.get('require_email_verification') ?? defaultSettings.requireEmailVerification,
+          geminiApiKey: settingsMap.get('gemini_api_key') || defaultSettings.geminiApiKey,
+          geminiModel: settingsMap.get('gemini_model') || defaultSettings.geminiModel,
         };
 
         setSettings(newSettings);

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { createSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useSettings } from '@/components/providers/settings-provider';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -22,6 +23,7 @@ import type { Invoice, InvoiceStats } from '@/types/invoice';
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
+  const { settings } = useSettings();
   const [stats, setStats] = useState<InvoiceStats | null>(null);
   const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,9 +162,9 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold">Dashboard</h1>
+          <h1 className="text-4xl font-bold">{settings.siteName} - Dashboard</h1>
           <p className="text-muted-foreground mt-2">
-            Finansal durumunuzu buradan takip edebilirsiniz
+            {settings.siteDescription}
           </p>
         </div>
         <Link href="/dashboard/invoices/new">

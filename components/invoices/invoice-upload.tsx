@@ -80,9 +80,13 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
         duration: 30000, // 30 saniye
       });
 
+      // Gemini API key ve model'i settings'den al
+      const geminiKey = settings.geminiApiKey || '';
+      const geminiModel = settings.geminiModel || 'gemini-2.0-flash-exp';
+
       const result = await processInvoice(targetFile, (progress) => {
         setOcrProgress(progress);
-      });
+      }, geminiKey, geminiModel);
       
       setOcrText(result.text);
       setOcrConfidence(result.confidence);
