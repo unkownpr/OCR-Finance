@@ -67,13 +67,13 @@ const preprocessImage = async (file: File): Promise<string> => {
         // Görseli çiz
         ctx.drawImage(img, 0, 0, width, height);
 
-        // ÇOK GELİŞMİŞ İYİLEŞTİRME
+        // ULTRA GELİŞMİŞ İYİLEŞTİRME (Petrol faturası formatı için)
         const imageData = ctx.getImageData(0, 0, width, height);
         const data = imageData.data;
 
-        // 1. Kontrast ve Parlaklık Artırma (daha agresif)
-        const contrast = 1.5; // 1.2'den 1.5'e çıkarıldı
-        const brightness = 15; // 10'dan 15'e çıkarıldı
+        // 1. ÇOK AGRESIF Kontrast ve Parlaklık (soluk faturalar için)
+        const contrast = 2.0; // Daha da artırıldı
+        const brightness = 25; // Daha parlak
 
         for (let i = 0; i < data.length; i += 4) {
           data[i] = Math.min(255, Math.max(0, data[i] * contrast + brightness));
@@ -81,30 +81,39 @@ const preprocessImage = async (file: File): Promise<string> => {
           data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * contrast + brightness));
         }
 
-        // 2. Sharpening Filter (keskinleştirme)
-        const sharpen = [
+        // 2. Güçlü Sharpening (kesin keskinleştirme)
+        const tempData = new Uint8ClampedArray(data);
+        const sharpenKernel = [
           0, -1, 0,
-          -1, 5, -1,
+          -1, 6, -1, // Merkez 6 (daha güçlü)
           0, -1, 0
         ];
         
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = width;
-        tempCanvas.height = height;
-        const tempCtx = tempCanvas.getContext('2d');
-        if (tempCtx) {
-          tempCtx.putImageData(imageData, 0, 0);
-          ctx.putImageData(imageData, 0, 0);
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            for (let c = 0; c < 3; c++) {
+              let sum = 0;
+              for (let ky = -1; ky <= 1; ky++) {
+                for (let kx = -1; kx <= 1; kx++) {
+                  const idx = ((y + ky) * width + (x + kx)) * 4 + c;
+                  const kernelIdx = (ky + 1) * 3 + (kx + 1);
+                  sum += tempData[idx] * sharpenKernel[kernelIdx];
+                }
+              }
+              const idx = (y * width + x) * 4 + c;
+              data[idx] = Math.min(255, Math.max(0, sum));
+            }
+          }
         }
 
-        // 3. Adaptive Threshold (metin netleştirme)
+        // 3. Daha Güçlü Adaptive Threshold
         for (let i = 0; i < data.length; i += 4) {
           const gray = (data[i] + data[i + 1] + data[i + 2]) / 3;
-          const threshold = 128;
+          const threshold = 140; // Biraz yükseltildi
           const newValue = gray > threshold ? 255 : 0;
           
-          // Hafif threshold (çok sert olmasın)
-          const mixFactor = 0.3; // %30 threshold, %70 orijinal
+          // Daha güçlü threshold
+          const mixFactor = 0.5; // %50 threshold, %50 orijinal
           data[i] = data[i] * (1 - mixFactor) + newValue * mixFactor;
           data[i + 1] = data[i + 1] * (1 - mixFactor) + newValue * mixFactor;
           data[i + 2] = data[i + 2] * (1 - mixFactor) + newValue * mixFactor;
@@ -131,7 +140,8 @@ const getWorker = async (onProgress?: ProgressCallback) => {
     return cachedWorker;
   }
 
-  const worker = await createWorker('tur+eng', OEM.LSTM_ONLY, {
+  // TÜRKÇE ÖNCE - Türkiye faturaları için optimize
+  const worker = await createWorker('tur', OEM.LSTM_ONLY, {
     logger: (m) => {
       console.log(m);
       if (onProgress && m.status) {
@@ -143,12 +153,16 @@ const getWorker = async (onProgress?: ProgressCallback) => {
     },
   });
 
-  // Tesseract parametrelerini ayarla (UPGRADED - Daha iyi sayı tanıma)
+  // Tesseract parametrelerini ayarla (ULTRA OPTIMIZED - Türkiye faturaları için)
   await worker.setParameters({
-    tessedit_pageseg_mode: PSM.SPARSE_TEXT, // AUTO yerine SPARSE_TEXT - faturalar için daha iyi
-    tessedit_char_whitelist: '0123456789ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZabcçdefgğhıijklmnoöprsştuüvyz.,:-/₺TL$€£ ', // Tüm para birimleri eklendi
-    preserve_interword_spaces: '1', // Kelime arası boşlukları koru
-    tessedit_do_invert: '0', // Renk terslemesi yapma
+    tessedit_pageseg_mode: PSM.SPARSE_TEXT,
+    // Türkçe karakterler + sayılar + noktalama
+    tessedit_char_whitelist: '0123456789ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZabcçdefgğhıijklmnoöprsştuüvyz.,:-/()₺TL*%XxLtLT ', 
+    preserve_interword_spaces: '1',
+    tessedit_do_invert: '0',
+    // Ek parametreler - sayı tanımayı iyileştir
+    classify_bln_numeric_mode: '1', // Sayı tanımayı optimize et
+    tessedit_char_blacklist: '', // Hiçbir karakteri kara listeye alma
   });
 
   cachedWorker = worker;
@@ -218,13 +232,16 @@ const extractAmount = (text: string): { selectedAmount: number | null; allAmount
   // Metni normalize et - çoklu boşlukları ve satır sonlarını temizle
   const normalizedText = text.replace(/\s+/g, ' ').toLowerCase();
   
-  // DAHA GENİŞ PATTERN'LER - Daha fazla varyasyon
+  // TÜRKİYE FATURA FORMATLARI İÇİN ÖZEL PATTERN'LER
   const patterns = [
-    // ÇOK YÜKSEK ÖNCELİK - Toplam varyasyonları (daha esnek regex)
-    /(?:toplam|total|sum|genel\s*toplam|grand\s*total|son\s*toplam|nihai\s*toplam)[:\s-]*(?:tutar|fiyat|bedel|ücret|miktar|amount)?[:\s-]*([0-9]{1,3}(?:[.,\s][0-9]{3})*[.,][0-9]{2})\s*(?:tl|₺|try)?/gi,
+    // EN YÜKSEK ÖNCELİK - Kredi Kartı Ödemeleri (K.KART, KART)
+    /(?:k\.?kart|k\.?k|kart|kredi\s*kart)[:\s-]*(?:\*)?[:\s-]*([0-9]{1,3}(?:[.,\s][0-9]{3})*[.,][0-9]{2})\s*(?:tl|₺|try)?/gi,
     
-    // ÇOK YÜKSEK ÖNCELİK - Ödenecek/Ödeme varyasyonları
-    /(?:ödenecek|ödeme|payment|pay|odeme)[:\s-]*(?:tutar|tutarı|toplam|miktar|amount)?[:\s-]*([0-9]{1,3}(?:[.,\s][0-9]{3})*[.,][0-9]{2})\s*(?:tl|₺|try)?/gi,
+    // ÇOK YÜKSEK ÖNCELİK - TOPLAM varyasyonları
+    /(?:toplam|total|sum|genel\s*toplam|grand\s*total|son\s*toplam)[:\s-]*(?:\*)?[:\s-]*([0-9]{1,3}(?:[.,\s][0-9]{3})*[.,][0-9]{2})\s*(?:tl|₺|try)?/gi,
+    
+    // ÇOK YÜKSEK ÖNCELİK - Nakit/Ödeme varyasyonları
+    /(?:nakit|nakıt|odenen|ödenecek|ödeme|ödenen|payment|pay)[:\s-]*(?:\*)?[:\s-]*([0-9]{1,3}(?:[.,\s][0-9]{3})*[.,][0-9]{2})\s*(?:tl|₺|try)?/gi,
     
     // ÇOK YÜKSEK ÖNCELİK - Net/Brüt toplamlar
     /(?:net|brüt|brut|gross|nett)[:\s-]*(?:toplam|tutar|total)?[:\s-]*([0-9]{1,3}(?:[.,\s][0-9]{3})*[.,][0-9]{2})\s*(?:tl|₺|try)?/gi,
@@ -246,6 +263,9 @@ const extractAmount = (text: string): { selectedAmount: number | null; allAmount
     
     // ÇOK DÜŞÜK ÖNCELİK - TL/₺/TRY ile biten basit sayılar
     /([0-9]+[.,][0-9]{2})\s*(?:tl|₺|try)/gi,
+    
+    // DÜŞÜK ÖNCELİK - Yıldız (*) ile başlayan tutarlar (Türkiye faturalarında yaygın)
+    /\*\s*([0-9]{1,3}(?:[.,\s][0-9]{3})*[.,][0-9]{2})\s*(?:tl|₺|try)?/gi,
     
     // ALTERNATİF - Sadece büyük sayılar (5+ basamak)
     /([0-9]{1,3}[.,][0-9]{3}[.,][0-9]{2})/gi,
