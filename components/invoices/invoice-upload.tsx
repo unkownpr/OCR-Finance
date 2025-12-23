@@ -8,12 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { processInvoice } from '@/lib/ocr';
+import { processInvoiceWithOCR } from '@/lib/ocr';
+import { analyzeInvoiceImageWithGemini } from '@/lib/gemini';
 import { createSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useSettings } from '@/components/providers/settings-provider';
 import { toast } from 'sonner';
-import { Upload, Image as ImageIcon, Loader2, Check, X, Sparkles } from 'lucide-react';
+import { Upload, Image as ImageIcon, Loader2, Check, X, Sparkles, Zap } from 'lucide-react';
 import type { InvoiceType } from '@/types/invoice';
 
 interface InvoiceUploadProps {
@@ -30,6 +31,7 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
   const [processing, setProcessing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [ocrProgress, setOcrProgress] = useState<{ status: string; progress: number } | null>(null);
+  const [useAI, setUseAI] = useState(true); // AI destekli OCR varsayılan açık
   
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -38,7 +40,9 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [ocrText, setOcrText] = useState('');
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
-  const [detectedAmounts, setDetectedAmounts] = useState<Array<{ value: number; matchText: string }>>([]);
+  
+  // Gemini API key var mı?
+  const hasGeminiKey = Boolean(settings.geminiApiKey);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -74,80 +78,113 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
     setOcrProgress({ status: 'Başlatılıyor...', progress: 0 });
 
     try {
-      const loadingToast = toast.info('Fatura işleniyor...', {
-        description: 'Gelişmiş OCR algoritması çalışıyor',
-        icon: <Sparkles className="w-4 h-4" />,
-        duration: 30000, // 30 saniye
-      });
+      // AI destekli OCR kullanılıyorsa ve Gemini key varsa
+      if (useAI && hasGeminiKey) {
+        const loadingToast = toast.info('Fatura AI ile analiz ediliyor...', {
+          description: 'Gemini Vision API çalışıyor ✨',
+          icon: <Sparkles className="w-4 h-4" />,
+          duration: 30000,
+        });
 
-      // Gemini API key ve model'i settings'den al
-      const geminiKey = settings.geminiApiKey || '';
-      const geminiModel = settings.geminiModel || 'gemini-2.0-flash-exp';
+        setOcrProgress({ status: 'Gemini Vision AI analiz ediyor...', progress: 0.5 });
 
-      const result = await processInvoice(targetFile, (progress) => {
-        setOcrProgress(progress);
-      }, geminiKey, geminiModel);
-      
-      setOcrText(result.text);
-      setOcrConfidence(result.confidence);
-      setDetectedAmounts(result.detectedAmounts || []);
-      
-      let autoFilledFields = 0;
-      
-      // Tutar otomatik doldur
-      if (result.amount) {
-        setAmount(result.amount.toString());
-        autoFilledFields++;
-      }
-      
-      // Tarih otomatik doldur
-      if (result.date) {
-        try {
-          // Tarihi parse et ve ISO formatına çevir
-          const dateParts = result.date.split(/[./]/);
-          if (dateParts.length === 3) {
-            const [day, month, year] = dateParts;
-            const parsedDate = new Date(`${year}-${month}-${day}`);
-            if (!isNaN(parsedDate.getTime())) {
-              setDate(parsedDate.toISOString().split('T')[0]);
-              autoFilledFields++;
+        const geminiResult = await analyzeInvoiceImageWithGemini(
+          targetFile,
+          settings.geminiApiKey,
+          settings.geminiModel || 'gemini-2.0-flash-exp'
+        );
+
+        console.log('🤖 Gemini AI sonuçları:', geminiResult);
+
+        let autoFilledFields = 0;
+
+        // Tutar
+        if (geminiResult.amount) {
+          setAmount(geminiResult.amount.toString());
+          autoFilledFields++;
+        }
+
+        // Tarih
+        if (geminiResult.date) {
+          try {
+            const dateParts = geminiResult.date.split(/[./]/);
+            if (dateParts.length === 3) {
+              const [day, month, year] = dateParts;
+              const parsedDate = new Date(`${year}-${month}-${day}`);
+              if (!isNaN(parsedDate.getTime())) {
+                setDate(parsedDate.toISOString().split('T')[0]);
+                autoFilledFields++;
+              }
             }
+          } catch (e) {
+            console.error('Tarih parse hatası:', e);
           }
-        } catch (e) {
-          console.error('Tarih parse hatası:', e);
         }
-      }
-      
-      // Başlık önerisi - vendor varsa kullan, yoksa ilk satır
-      if (!title) {
-        if (result.vendor) {
-          setTitle(result.vendor.substring(0, 50));
+
+        // Başlık (vendor)
+        if (geminiResult.vendor) {
+          setTitle(geminiResult.vendor.substring(0, 50));
           autoFilledFields++;
-        } else if (result.text) {
-          const firstLine = result.text.split('\n')[0].substring(0, 50);
+        }
+
+        // Kategori
+        if (geminiResult.category && settings.invoiceCategories.includes(geminiResult.category)) {
+          setCategory(geminiResult.category);
+          autoFilledFields++;
+        }
+
+        // OCR metnini göster (AI analizi)
+        setOcrText(geminiResult.rawExtraction || 'AI analizi tamamlandı');
+        setOcrConfidence(geminiResult.confidence * 100);
+
+        toast.dismiss(loadingToast);
+
+        toast.success('AI analizi tamamlandı! 🎉', {
+          description: `${autoFilledFields} alan otomatik dolduruldu • Güven: ${Math.round(geminiResult.confidence * 100)}%`,
+          duration: 5000,
+        });
+
+        if (geminiResult.invoiceNumber) {
+          toast.info('Fatura No tespit edildi', {
+            description: geminiResult.invoiceNumber,
+          });
+        }
+      } else {
+        // Standart Tesseract.js OCR
+        const loadingToast = toast.info('Fatura işleniyor...', {
+          description: 'Tesseract OCR çalışıyor',
+          icon: <ImageIcon className="w-4 h-4" />,
+          duration: 30000,
+        });
+
+        const ocrResult = await processInvoiceWithOCR(targetFile, (progress) => {
+          setOcrProgress(progress);
+        });
+
+        setOcrText(ocrResult.text);
+        setOcrConfidence(ocrResult.confidence);
+
+        // Basit başlık önerisi
+        if (!title && ocrResult.text) {
+          const firstLine = ocrResult.text.split('\n')[0].substring(0, 50);
           setTitle(firstLine);
-          autoFilledFields++;
         }
-      }
 
-      toast.dismiss(loadingToast);
-      
-      toast.success('OCR işlemi başarıyla tamamlandı!', {
-        description: `${autoFilledFields} alan otomatik dolduruldu • Güven: ${Math.round(result.confidence)}%`,
-        duration: 5000,
-      });
+        toast.dismiss(loadingToast);
 
-      // Detaylı sonuçları göster
-      if (result.invoiceNumber) {
-        toast.info('Fatura No tespit edildi', {
-          description: result.invoiceNumber,
+        toast.success('OCR işlemi tamamlandı', {
+          description: `Metin tanındı • Güven: ${Math.round(ocrResult.confidence)}%`,
+        });
+
+        toast.info('Manuel düzenleme gerekebilir', {
+          description: 'Lütfen fatura bilgilerini kontrol edin',
         });
       }
     } catch (error) {
-      toast.error('OCR işlemi başarısız', {
-        description: 'Lütfen alanları manuel olarak doldurun',
+      toast.error('İşlem başarısız', {
+        description: error instanceof Error ? error.message : 'Lütfen alanları manuel olarak doldurun',
       });
-      console.error('OCR Error:', error);
+      console.error('OCR/AI Error:', error);
     } finally {
       setProcessing(false);
       setOcrProgress(null);
@@ -219,7 +256,7 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
       setOcrText('');
       setOcrConfidence(null);
       setOcrProgress(null);
-      setDetectedAmounts([]);
+      setUseAI(true); // AI destekli OCR varsayılan açık
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -241,7 +278,10 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
           <CardHeader>
             <CardTitle>Fatura Görseli</CardTitle>
             <CardDescription>
-              Fatura görselinizi yükleyin - OCR analizi otomatik başlayacak
+              {hasGeminiKey 
+                ? 'Fatura görselinizi yükleyin - AI destekli OCR ile otomatik analiz edilecek'
+                : 'Fatura görselinizi yükleyin - Standart OCR ile metin tanınacak'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -256,6 +296,37 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
                 disabled={processing || uploading}
               />
             </div>
+
+            {/* AI Destekli OCR Checkbox - Sadece Gemini key varsa görünsün */}
+            {hasGeminiKey && (
+              <div className="flex items-start space-x-3 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="useAI"
+                  checked={useAI}
+                  onChange={(e) => setUseAI(e.target.checked)}
+                  disabled={processing || uploading}
+                  className="mt-1 w-4 h-4 text-primary bg-background border-primary/30 rounded focus:ring-2 focus:ring-primary cursor-pointer disabled:cursor-not-allowed"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="useAI" className="flex items-center gap-2 cursor-pointer font-medium text-sm">
+                    <Zap className="w-4 h-4 text-primary" />
+                    AI Destekli OCR (Gemini Vision)
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {useAI ? (
+                      <>
+                        <span className="text-primary font-medium">✓ Aktif:</span> Gemini AI faturayı direkt analiz edecek ve tüm alanları otomatik dolduracak
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-muted-foreground">○ Kapalı:</span> Standart OCR kullanılacak, manuel düzenleme gerekebilir
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {preview && (
               <div className="relative">
@@ -316,7 +387,7 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
             {ocrText && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Tespit Edilen Metin</Label>
+                  <Label>{useAI ? 'AI Analizi' : 'Tespit Edilen Metin'}</Label>
                   {ocrConfidence !== null && (
                     <Badge variant={ocrConfidence > 80 ? 'default' : 'secondary'} className="text-xs">
                       Güven: {Math.round(ocrConfidence)}%
@@ -329,7 +400,11 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
                   className="h-32 text-xs font-mono bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
-                  💡 Metin otomatik olarak tanındı. Fatura bilgileri formu otomatik doldurdu.
+                  {useAI && hasGeminiKey ? (
+                    <>🤖 AI ile analiz edildi. Fatura bilgileri otomatik dolduruldu.</>
+                  ) : (
+                    <>📝 OCR ile metin tanındı. Lütfen bilgileri kontrol edin.</>
+                  )}
                 </p>
               </div>
             )}
@@ -341,7 +416,10 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
           <CardHeader>
             <CardTitle>Fatura Bilgileri</CardTitle>
             <CardDescription>
-              Görsel yüklediğinizde OCR otomatik dolduracak, gerekirse düzeltin
+              {hasGeminiKey && useAI
+                ? 'AI tüm alanları otomatik dolduracak, kontrol edip kaydedin'
+                : 'Lütfen fatura bilgilerini girin veya kontrol edin'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -369,32 +447,6 @@ export const InvoiceUpload = ({ onSuccess }: InvoiceUploadProps) => {
                 required
                 disabled={uploading}
               />
-              
-              {/* Birden fazla tutar tespit edildiyse seçenek göster */}
-              {detectedAmounts.length > 1 && (
-                <div className="space-y-2 p-3 bg-accent/10 border border-accent/20 rounded-lg">
-                  <p className="text-xs font-medium text-accent">
-                    📊 Birden fazla tutar tespit edildi:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {detectedAmounts.map((amt, idx) => (
-                      <Button
-                        key={idx}
-                        type="button"
-                        variant={parseFloat(amount) === amt.value ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setAmount(amt.value.toString())}
-                        className="text-xs"
-                      >
-                        {amt.value.toFixed(2)} ₺
-                      </Button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    💡 Doğru tutarı seçin veya manuel girin
-                  </p>
-                </div>
-              )}
             </div>
 
             <div className="space-y-2">

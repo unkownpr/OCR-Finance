@@ -15,6 +15,7 @@ import {
   Wallet,
   ShieldCheck,
   Shield,
+  Github,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useSettings } from '@/components/providers/settings-provider';
@@ -166,6 +167,28 @@ export const Sidebar = () => {
           <LogOut className="w-5 h-5" />
           Çıkış Yap
         </Button>
+      </div>
+
+      <Separator />
+
+      {/* Open Source Badge */}
+      <div className="p-4">
+        <a
+          href="https://github.com/unkownpr/OCR-Finance"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors group"
+        >
+          <Github className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <div className="text-center">
+            <p className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+              Open Source
+            </p>
+            <p className="text-[10px] text-muted-foreground/70">
+              GitHub'da görüntüle
+            </p>
+          </div>
+        </a>
       </div>
     </aside>
   );

@@ -29,9 +29,9 @@ const DashboardLayoutContent = ({ children }: { children: React.ReactNode }) => 
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Sidebar />
-      <main className="ml-64 min-h-screen">
+      <main className="ml-64 flex-1">
         {children}
       </main>
     </div>
