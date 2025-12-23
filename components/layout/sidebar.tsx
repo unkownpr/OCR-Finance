@@ -56,7 +56,8 @@ export const Sidebar = () => {
       const supabase = createSupabaseClient();
       await supabase.auth.signOut();
       toast.success('Çıkış yapıldı');
-      router.push('/login');
+      // Anasayfaya yönlendir
+      router.push('/');
       router.refresh();
     } catch (error) {
       toast.error('Çıkış yapılırken bir hata oluştu');
