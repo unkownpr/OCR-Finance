@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   // Workspace root uyarısını düzelt
   outputFileTracingRoot: __dirname,
   
+  // Build time'da SSG için dummy env var'lar
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key',
+  },
+  
   images: {
     remotePatterns: [
       {
