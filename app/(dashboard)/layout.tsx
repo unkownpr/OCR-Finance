@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
+import { Footer } from '@/components/layout/footer';
 import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
 import { Loader2 } from 'lucide-react';
 
@@ -29,11 +30,14 @@ const DashboardLayoutContent = ({ children }: { children: React.ReactNode }) => 
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
       <Sidebar />
-      <main className="ml-64 flex-1">
-        {children}
-      </main>
+      <div className="ml-64 flex flex-col min-h-screen">
+        <main className="flex-1">
+          {children}
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 };

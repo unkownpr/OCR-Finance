@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useSettings } from '@/components/providers/settings-provider';
 import { formatCurrency } from '@/lib/utils';
 import {
   BarChart,
@@ -35,8 +36,14 @@ const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 
 export default function StatsPage() {
   const { user } = useAuth();
+  const { settings } = useSettings();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Title'ı güncelle
+  useEffect(() => {
+    document.title = `İstatistikler - ${settings.siteName}`;
+  }, [settings.siteName]);
 
   useEffect(() => {
     if (!user) return;

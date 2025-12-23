@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { createSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useSettings } from '@/components/providers/settings-provider';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -36,10 +37,20 @@ export default function InvoiceDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { user } = useAuth();
+  const { settings } = useSettings();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Title'ı güncelle
+  useEffect(() => {
+    if (invoice) {
+      document.title = `${invoice.title} - ${settings.siteName}`;
+    } else {
+      document.title = `Fatura Detayı - ${settings.siteName}`;
+    }
+  }, [invoice, settings.siteName]);
 
   useEffect(() => {
     if (!user || !params.id) return;

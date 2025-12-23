@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { createSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useSettings } from '@/components/providers/settings-provider';
 import { toast } from 'sonner';
 import {
   User,
@@ -22,10 +23,16 @@ import {
 
 export default function SettingsPage() {
   const { user, isAdmin } = useAuth();
+  const { settings } = useSettings();
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
+
+  // Title'ı güncelle
+  useEffect(() => {
+    document.title = `Ayarlar - ${settings.siteName}`;
+  }, [settings.siteName]);
 
   useEffect(() => {
     if (!user) return;

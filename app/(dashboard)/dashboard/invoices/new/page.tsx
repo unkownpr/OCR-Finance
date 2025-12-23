@@ -1,12 +1,20 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { InvoiceUpload } from '@/components/invoices/invoice-upload';
+import { useSettings } from '@/components/providers/settings-provider';
 import { ArrowLeft } from 'lucide-react';
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const { settings } = useSettings();
+
+  // Title'ı güncelle
+  useEffect(() => {
+    document.title = `Yeni Fatura - ${settings.siteName}`;
+  }, [settings.siteName]);
 
   const handleSuccess = () => {
     router.push('/dashboard/invoices');

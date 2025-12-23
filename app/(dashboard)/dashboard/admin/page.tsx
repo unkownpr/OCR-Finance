@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { createSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useSettings } from '@/components/providers/settings-provider';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
   ShieldCheck,
@@ -39,9 +40,15 @@ interface SystemStats {
 export default function AdminPage() {
   const router = useRouter();
   const { user, isAdmin, loading: authLoading } = useAuth();
+  const { settings } = useSettings();
   const [users, setUsers] = useState<UserWithStats[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Title'ı güncelle
+  useEffect(() => {
+    document.title = `Admin Panel - ${settings.siteName}`;
+  }, [settings.siteName]);
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {

@@ -36,10 +36,15 @@ import { useSettings } from '@/components/providers/settings-provider';
 
 export default function AdminSettingsPage() {
   const { user, isAdmin } = useAuth();
-  const { refreshSettings } = useSettings();
+  const { settings, refreshSettings } = useSettings();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+
+  // Title'ı güncelle
+  useEffect(() => {
+    document.title = `Site Ayarları - ${settings.siteName}`;
+  }, [settings.siteName]);
 
   // Genel Ayarlar
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({

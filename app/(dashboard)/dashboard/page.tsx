@@ -28,6 +28,11 @@ export default function DashboardPage() {
   const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Title'ı güncelle
+  useEffect(() => {
+    document.title = `Dashboard - ${settings.siteName}`;
+  }, [settings.siteName]);
+
   // Debug: Kullanıcı durumunu logla
   useEffect(() => {
     console.log('Dashboard - User state:', {

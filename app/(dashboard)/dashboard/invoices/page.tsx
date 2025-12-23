@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useSettings } from '@/components/providers/settings-provider';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
   Plus,
@@ -24,11 +25,17 @@ import type { Invoice } from '@/types/invoice';
 
 export default function InvoicesPage() {
   const { user } = useAuth();
+  const { settings } = useSettings();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'income' | 'expense'>('all');
+
+  // Title'ı güncelle
+  useEffect(() => {
+    document.title = `Faturalar - ${settings.siteName}`;
+  }, [settings.siteName]);
 
   useEffect(() => {
     if (!user) return;
