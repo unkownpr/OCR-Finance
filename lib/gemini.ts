@@ -63,6 +63,7 @@ JSON formatında yanıt ver (sadece JSON, açıklama yok):
   "invoiceNumber": "276850-5",
   "date": "28/07/2023",
   "vendor": "HIRFANLI PETROL A.S.",
+  "category": null,
   "confidence": 0.95
 }`;
 
@@ -113,6 +114,7 @@ JSON formatında yanıt ver (sadece JSON, açıklama yok):
         invoiceNumber: null,
         date: null,
         vendor: null,
+        category: null,
         confidence: 0,
         rawExtraction: generatedText,
       };
@@ -125,6 +127,7 @@ JSON formatında yanıt ver (sadece JSON, açıklama yok):
       invoiceNumber: extractedData.invoiceNumber || null,
       date: extractedData.date || null,
       vendor: extractedData.vendor || null,
+      category: extractedData.category || null,
       confidence: extractedData.confidence || 0.5,
       rawExtraction: generatedText,
     };
